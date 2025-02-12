@@ -65,15 +65,23 @@
       <strong>Periods:</strong> <span id="periods-display">0</span><br>
       <strong>Rebirths:</strong> <span id="rebirths-display">0</span><br>
       <strong>Commas:</strong> <span id="commas-display">0</span><br>
-      <strong>Time Played:</strong> <span id="time-played-display">0</span> seconds
+      <strong>Time Played:</strong> <span id="time-played-display">0</span> seconds<br>
+      <strong>Click Value:</strong> <span id="click-value-display">1</span><br>
+      <strong>Auto Production Multiplier:</strong> <span id="production-multiplier-display">1.00</span>
     </div>
     <br>
     <button id="click-button">Click for .</button>
     <button id="buy-upgrade-button">
       Buy Auto-Clicker (Cost: <span id="upgrade-cost-display">10</span> periods)
     </button>
+    <button id="buy-manual-upgrade-button">
+      Buy Manual Click Upgrade (Cost: <span id="manual-upgrade-cost-display">50</span> periods)
+    </button>
+    <button id="buy-production-upgrade-button">
+      Buy Production Upgrade (Cost: <span id="production-upgrade-cost-display">100</span> periods)
+    </button>
     <button id="rebirth-button" class="hidden">
-      Rebirth (Cost: <span id="rebirth-cost-display">1000000000</span> periods)
+      Rebirth (Cost: <span id="rebirth-cost-display">1,000,000,000</span> periods)
     </button>
     <button id="buy-comma-button" class="hidden">
       Buy Comma (Cost: <span id="comma-cost-display">1000</span> periods)
@@ -102,31 +110,41 @@
 </div>
 
 <script>
-  // Initial game state
+  // Initial game state with additional upgrades
   let gameState = {
     username: "",
     periods: 0,
     autoClickers: 0,
-    upgradeCost: 10,
+    upgradeCost: 10, // cost for an auto-clicker
     rebirths: 0,
-    rebirthThreshold: 1e9, // 1 billion periods for the first rebirth
+    rebirthThreshold: 1e9, // 1 billion periods for first rebirth
     commas: 0,
     commaCost: 1000,
-    timePlayed: 0, // seconds
-    lastUpdate: Date.now()
+    timePlayed: 0, // in seconds
+    lastUpdate: Date.now(),
+    clickValue: 1,              // Amount earned per manual click
+    manualUpgradeCost: 50,      // Cost for upgrading click value
+    productionMultiplier: 1,    // Multiplier for auto production
+    productionUpgradeCost: 100  // Cost for upgrading production multiplier
   };
 
-  // Utility: number formatting
+  // Utility: Format numbers with abbreviations up to Sextillion
   function formatNumber(num) {
-    if (num >= 1e9) {
-      return (num / 1e9).toFixed(2) + "B";
-    } else if (num >= 1e6) {
-      return (num / 1e6).toFixed(2) + "M";
-    } else if (num >= 1e3) {
-      return (num / 1e3).toFixed(2) + "K";
-    } else {
-      return num.toFixed(2);
+    const abbreviations = [
+      { value: 1e21, symbol: "Sx" },
+      { value: 1e18, symbol: "Qi" },
+      { value: 1e15, symbol: "Qa" },
+      { value: 1e12, symbol: "T" },
+      { value: 1e9, symbol: "B" },
+      { value: 1e6, symbol: "M" },
+      { value: 1e3, symbol: "K" }
+    ];
+    for (let i = 0; i < abbreviations.length; i++) {
+      if (num >= abbreviations[i].value) {
+        return (num / abbreviations[i].value).toFixed(2) + abbreviations[i].symbol;
+      }
     }
+    return num.toFixed(2);
   }
 
   // Update game display
@@ -144,6 +162,10 @@
     document.getElementById("rebirth-cost-display").textContent = formatNumber(gameState.rebirthThreshold);
     document.getElementById("comma-cost-display").textContent = formatNumber(gameState.commaCost);
     document.getElementById("time-played-display").textContent = Math.floor(gameState.timePlayed);
+    document.getElementById("click-value-display").textContent = gameState.clickValue.toFixed(2);
+    document.getElementById("production-multiplier-display").textContent = gameState.productionMultiplier.toFixed(2);
+    document.getElementById("manual-upgrade-cost-display").textContent = formatNumber(gameState.manualUpgradeCost);
+    document.getElementById("production-upgrade-cost-display").textContent = formatNumber(gameState.productionUpgradeCost);
   }
 
   // Save the current game state using localStorage
@@ -169,7 +191,7 @@
   // Update leaderboard data in localStorage and render the leaderboard table
   function updateLeaderboard() {
     let leaderboard = JSON.parse(localStorage.getItem("symbolSimulatorLeaderboard")) || {};
-    // If the current player's periods are higher than what was recorded, update their entry.
+    // Update only if current player's periods are higher than recorded
     if (!leaderboard[gameState.username] || gameState.periods > leaderboard[gameState.username].periods) {
       leaderboard[gameState.username] = {
         username: gameState.username,
@@ -184,7 +206,7 @@
     let leaderboardBody = document.getElementById("leaderboard-body");
     leaderboardBody.innerHTML = "";
     let leaderboardArray = Object.values(leaderboard);
-    // Sort by periods descending (you can modify sorting for other categories if desired)
+    // Sort by periods descending
     leaderboardArray.sort((a, b) => b.periods - a.periods);
     leaderboardArray.forEach(entry => {
       let row = document.createElement("tr");
@@ -203,15 +225,15 @@
     gameState.lastUpdate = now;
     gameState.timePlayed += delta;
 
-    // Calculate multiplier for auto production (if commas unlocked)
+    // Calculate multiplier for production (from commas, if unlocked)
     let multiplier = 1;
     if (gameState.rebirths >= 5) {
       multiplier = Math.pow(1.005, gameState.commas);
     }
-    // Auto production: each auto-clicker gives 1 period per second (multiplied by the comma multiplier)
-    gameState.periods += gameState.autoClickers * delta * multiplier;
+    // Auto production: auto-clickers produce periods based on production multiplier
+    gameState.periods += gameState.autoClickers * delta * multiplier * gameState.productionMultiplier;
 
-    // Show rebirth button if the player has reached the required threshold
+    // Show rebirth button if threshold is met
     let rebirthButton = document.getElementById("rebirth-button");
     if (gameState.periods >= gameState.rebirthThreshold) {
       rebirthButton.classList.remove("hidden");
@@ -252,14 +274,14 @@
     updateLeaderboard();
   });
 
-  // Event: Click for a period
+  // Event: Manual click for a period
   document.getElementById("click-button").addEventListener("click", function() {
     let multiplier = 1;
     if (gameState.rebirths >= 5) {
       multiplier = Math.pow(1.005, gameState.commas);
     }
-    // Each click gives 1 period multiplied by the current multiplier
-    gameState.periods += 1 * multiplier;
+    // Use clickValue instead of a fixed 1
+    gameState.periods += gameState.clickValue * multiplier;
     updateDisplay();
   });
 
@@ -268,7 +290,7 @@
     if (gameState.periods >= gameState.upgradeCost) {
       gameState.periods -= gameState.upgradeCost;
       gameState.autoClickers += 1;
-      // Increase the cost for the next upgrade by 15%
+      // Increase cost by 15%
       gameState.upgradeCost *= 1.15;
       updateDisplay();
     } else {
@@ -276,15 +298,41 @@
     }
   });
 
-  // Event: Rebirth (resets progress but increases rebirth count and required threshold)
+  // Event: Buy Manual Click Upgrade (increases periods per click)
+  document.getElementById("buy-manual-upgrade-button").addEventListener("click", function() {
+    if (gameState.periods >= gameState.manualUpgradeCost) {
+      gameState.periods -= gameState.manualUpgradeCost;
+      gameState.clickValue += 1; // Increase click value by 1
+      gameState.manualUpgradeCost *= 1.2;
+      updateDisplay();
+    } else {
+      alert("Not enough periods to upgrade your click!");
+    }
+  });
+
+  // Event: Buy Production Upgrade (increases auto production efficiency)
+  document.getElementById("buy-production-upgrade-button").addEventListener("click", function() {
+    if (gameState.periods >= gameState.productionUpgradeCost) {
+      gameState.periods -= gameState.productionUpgradeCost;
+      gameState.productionMultiplier *= 1.1; // Increase auto production by 10%
+      gameState.productionUpgradeCost *= 1.3;
+      updateDisplay();
+    } else {
+      alert("Not enough periods to upgrade your production!");
+    }
+  });
+
+  // Event: Rebirth (resets progress but increases rebirth count and threshold)
   document.getElementById("rebirth-button").addEventListener("click", function() {
     if (gameState.periods >= gameState.rebirthThreshold) {
-      // Reset progress while preserving rebirth count
+      // Reset progress while preserving rebirth count and upgrades
       gameState.periods = 0;
       gameState.autoClickers = 0;
       gameState.upgradeCost = 10;
+      // Optionally, you might choose to reset manual and production upgrades too.
+      // Here, we leave clickValue, productionMultiplier, and their costs intact.
       gameState.rebirths += 1;
-      // Increase the required threshold (for example, by a factor of 10)
+      // Increase the threshold for the next rebirth (example: 10×)
       gameState.rebirthThreshold *= 10;
       updateDisplay();
       alert("Rebirth successful!");
@@ -298,7 +346,7 @@
     if (gameState.periods >= gameState.commaCost) {
       gameState.periods -= gameState.commaCost;
       gameState.commas += 1;
-      // Increase the cost for the next comma purchase by 25%
+      // Increase cost for the next comma by 25%
       gameState.commaCost *= 1.25;
       updateDisplay();
     } else {
@@ -315,3 +363,4 @@
 </script>
 </body>
 </html>
+
