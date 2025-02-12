@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Symbol Simulator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+    #game-container {
+      max-width: 600px;
+      margin: 30px auto;
+      padding: 20px;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+    }
+    input[type="text"] {
+      padding: 8px;
+      margin: 5px;
+      width: 80%;
+    }
+    .hidden {
+      display: none;
+    }
+    #leaderboard {
+      margin-top: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+<div id="game-container">
+  <!-- Username setup -->
+  <div id="username-container">
+    <h2>Enter Your Username</h2>
+    <input type="text" id="username-input" placeholder="Username">
+    <button id="start-game">Start Game</button>
+  </div>
+
+  <!-- Main game area (hidden until a username is entered) -->
+  <div id="game" class="hidden">
+    <h1>Symbol Simulator</h1>
+    <div>
+      <strong>Periods:</strong> <span id="periods-display">0</span><br>
+      <strong>Rebirths:</strong> <span id="rebirths-display">0</span><br>
+      <strong>Commas:</strong> <span id="commas-display">0</span><br>
+      <strong>Time Played:</strong> <span id="time-played-display">0</span> seconds
+    </div>
+    <br>
+    <button id="click-button">Click for .</button>
+    <button id="buy-upgrade-button">
+      Buy Auto-Clicker (Cost: <span id="upgrade-cost-display">10</span> periods)
+    </button>
+    <button id="rebirth-button" class="hidden">
+      Rebirth (Cost: <span id="rebirth-cost-display">1000000000</span> periods)
+    </button>
+    <button id="buy-comma-button" class="hidden">
+      Buy Comma (Cost: <span id="comma-cost-display">1000</span> periods)
+    </button>
+    <br><br>
+    <button id="save-game-button">Save Game</button>
+    <button id="load-game-button">Load Game</button>
+  </div>
+
+  <!-- Leaderboard -->
+  <div id="leaderboard">
+    <h2>Leaderboard</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Time Played (s)</th>
+          <th>Periods</th>
+          <th>Commas</th>
+        </tr>
+      </thead>
+      <tbody id="leaderboard-body">
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  // Initial game state
+  let gameState = {
+    username: "",
+    periods: 0,
+    autoClickers: 0,
+    upgradeCost: 10,
+    rebirths: 0,
+    rebirthThreshold: 1e9, // 1 billion periods for the first rebirth
+    commas: 0,
+    commaCost: 1000,
+    timePlayed: 0, // seconds
+    lastUpdate: Date.now()
+  };
+
+  // Utility: number formatting
+  function formatNumber(num) {
+    if (num >= 1e9) {
+      return (num / 1e9).toFixed(2) + "B";
+    } else if (num >= 1e6) {
+      return (num / 1e6).toFixed(2) + "M";
+    } else if (num >= 1e3) {
+      return (num / 1e3).toFixed(2) + "K";
+    } else {
+      return num.toFixed(2);
+    }
+  }
+
+  // Update game display
+  function updateDisplay() {
+    // Calculate multiplier from commas if unlocked (after 5 rebirths)
+    let multiplier = 1;
+    if (gameState.rebirths >= 5) {
+      multiplier = Math.pow(1.005, gameState.commas);
+    }
+    document.getElementById("periods-display").textContent =
+      formatNumber(gameState.periods) + (multiplier !== 1 ? " (x" + multiplier.toFixed(3) + ")" : "");
+    document.getElementById("rebirths-display").textContent = gameState.rebirths;
+    document.getElementById("commas-display").textContent = gameState.commas;
+    document.getElementById("upgrade-cost-display").textContent = formatNumber(gameState.upgradeCost);
+    document.getElementById("rebirth-cost-display").textContent = formatNumber(gameState.rebirthThreshold);
+    document.getElementById("comma-cost-display").textContent = formatNumber(gameState.commaCost);
+    document.getElementById("time-played-display").textContent = Math.floor(gameState.timePlayed);
+  }
+
+  // Save the current game state using localStorage
+  function saveGame() {
+    localStorage.setItem("symbolSimulatorGameState_" + gameState.username, JSON.stringify(gameState));
+    updateLeaderboard();
+    alert("Game saved!");
+  }
+
+  // Load the game state from localStorage
+  function loadGame() {
+    let savedState = localStorage.getItem("symbolSimulatorGameState_" + gameState.username);
+    if (savedState) {
+      gameState = JSON.parse(savedState);
+      gameState.lastUpdate = Date.now();
+      alert("Game loaded!");
+      updateDisplay();
+    } else {
+      alert("No saved game found for this username.");
+    }
+  }
+
+  // Update leaderboard data in localStorage and render the leaderboard table
+  function updateLeaderboard() {
+    let leaderboard = JSON.parse(localStorage.getItem("symbolSimulatorLeaderboard")) || {};
+    // If the current player's periods are higher than what was recorded, update their entry.
+    if (!leaderboard[gameState.username] || gameState.periods > leaderboard[gameState.username].periods) {
+      leaderboard[gameState.username] = {
+        username: gameState.username,
+        timePlayed: gameState.timePlayed,
+        periods: gameState.periods,
+        commas: gameState.commas
+      };
+    }
+    localStorage.setItem("symbolSimulatorLeaderboard", JSON.stringify(leaderboard));
+    
+    // Render leaderboard
+    let leaderboardBody = document.getElementById("leaderboard-body");
+    leaderboardBody.innerHTML = "";
+    let leaderboardArray = Object.values(leaderboard);
+    // Sort by periods descending (you can modify sorting for other categories if desired)
+    leaderboardArray.sort((a, b) => b.periods - a.periods);
+    leaderboardArray.forEach(entry => {
+      let row = document.createElement("tr");
+      row.innerHTML = `<td>${entry.username}</td>
+                       <td>${Math.floor(entry.timePlayed)}</td>
+                       <td>${formatNumber(entry.periods)}</td>
+                       <td>${entry.commas}</td>`;
+      leaderboardBody.appendChild(row);
+    });
+  }
+
+  // Main game loop: updates every 50ms
+  function gameLoop() {
+    let now = Date.now();
+    let delta = (now - gameState.lastUpdate) / 1000; // seconds elapsed
+    gameState.lastUpdate = now;
+    gameState.timePlayed += delta;
+
+    // Calculate multiplier for auto production (if commas unlocked)
+    let multiplier = 1;
+    if (gameState.rebirths >= 5) {
+      multiplier = Math.pow(1.005, gameState.commas);
+    }
+    // Auto production: each auto-clicker gives 1 period per second (multiplied by the comma multiplier)
+    gameState.periods += gameState.autoClickers * delta * multiplier;
+
+    // Show rebirth button if the player has reached the required threshold
+    let rebirthButton = document.getElementById("rebirth-button");
+    if (gameState.periods >= gameState.rebirthThreshold) {
+      rebirthButton.classList.remove("hidden");
+    } else {
+      rebirthButton.classList.add("hidden");
+    }
+
+    // Show the Buy Comma button if 5 or more rebirths have been achieved
+    let buyCommaButton = document.getElementById("buy-comma-button");
+    if (gameState.rebirths >= 5) {
+      buyCommaButton.classList.remove("hidden");
+    } else {
+      buyCommaButton.classList.add("hidden");
+    }
+
+    updateDisplay();
+  }
+
+  // Event: Start Game after entering username
+  document.getElementById("start-game").addEventListener("click", function() {
+    let username = document.getElementById("username-input").value.trim();
+    if (username === "") {
+      alert("Please enter a valid username!");
+      return;
+    }
+    gameState.username = username;
+    // Attempt to load a saved game automatically
+    let savedState = localStorage.getItem("symbolSimulatorGameState_" + gameState.username);
+    if (savedState) {
+      gameState = JSON.parse(savedState);
+      gameState.lastUpdate = Date.now();
+    }
+    document.getElementById("username-container").classList.add("hidden");
+    document.getElementById("game").classList.remove("hidden");
+    updateDisplay();
+    // Start the game loop
+    setInterval(gameLoop, 50);
+    updateLeaderboard();
+  });
+
+  // Event: Click for a period
+  document.getElementById("click-button").addEventListener("click", function() {
+    let multiplier = 1;
+    if (gameState.rebirths >= 5) {
+      multiplier = Math.pow(1.005, gameState.commas);
+    }
+    // Each click gives 1 period multiplied by the current multiplier
+    gameState.periods += 1 * multiplier;
+    updateDisplay();
+  });
+
+  // Event: Buy an auto-clicker upgrade
+  document.getElementById("buy-upgrade-button").addEventListener("click", function() {
+    if (gameState.periods >= gameState.upgradeCost) {
+      gameState.periods -= gameState.upgradeCost;
+      gameState.autoClickers += 1;
+      // Increase the cost for the next upgrade by 15%
+      gameState.upgradeCost *= 1.15;
+      updateDisplay();
+    } else {
+      alert("Not enough periods!");
+    }
+  });
+
+  // Event: Rebirth (resets progress but increases rebirth count and required threshold)
+  document.getElementById("rebirth-button").addEventListener("click", function() {
+    if (gameState.periods >= gameState.rebirthThreshold) {
+      // Reset progress while preserving rebirth count
+      gameState.periods = 0;
+      gameState.autoClickers = 0;
+      gameState.upgradeCost = 10;
+      gameState.rebirths += 1;
+      // Increase the required threshold (for example, by a factor of 10)
+      gameState.rebirthThreshold *= 10;
+      updateDisplay();
+      alert("Rebirth successful!");
+    } else {
+      alert("Not enough periods to rebirth!");
+    }
+  });
+
+  // Event: Buy a comma upgrade (unlocked after 5 rebirths)
+  document.getElementById("buy-comma-button").addEventListener("click", function() {
+    if (gameState.periods >= gameState.commaCost) {
+      gameState.periods -= gameState.commaCost;
+      gameState.commas += 1;
+      // Increase the cost for the next comma purchase by 25%
+      gameState.commaCost *= 1.25;
+      updateDisplay();
+    } else {
+      alert("Not enough periods to buy a comma!");
+    }
+  });
+
+  // Save and Load buttons
+  document.getElementById("save-game-button").addEventListener("click", saveGame);
+  document.getElementById("load-game-button").addEventListener("click", loadGame);
+
+  // Save game automatically before leaving the page
+  window.addEventListener("beforeunload", saveGame);
+</script>
+</body>
+</html>
