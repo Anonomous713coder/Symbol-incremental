@@ -1,366 +1,693 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Symbol Simulator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
+    /* Reset and base styles */
+    * { box-sizing: border-box; }
     body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
       margin: 0;
       padding: 0;
+      font-family: 'Roboto', sans-serif;
+      background: url('https://i.imgur.com/PwT4ElC.jpg') no-repeat center center fixed;
+      background-size: cover;
+      color: #fff;
     }
+    /* Main container */
     #game-container {
-      max-width: 600px;
-      margin: 30px auto;
-      padding: 20px;
-      background: #fff;
-      border: 1px solid #ccc;
-      border-radius: 5px;
+      background: rgba(0, 0, 0, 0.75);
+      width: 90%;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px 30px 40px;
+      border-radius: 10px;
+      box-shadow: 0 0 30px rgba(0,0,0,0.8);
+      position: relative;
     }
     h1, h2 {
       text-align: center;
+      font-family: 'Press Start 2P', cursive;
+      margin: 10px 0;
     }
-    button {
-      padding: 10px 20px;
-      margin: 5px;
-      cursor: pointer;
+    h1 { font-size: 2.5rem; }
+    h2 { font-size: 1.75rem; }
+    /* Account Forms */
+    #account-container {
+      margin-bottom: 20px;
+      text-align: center;
     }
-    input[type="text"] {
-      padding: 8px;
-      margin: 5px;
-      width: 80%;
-    }
-    .hidden {
+    .account-form {
+      background: rgba(0,0,0,0.85);
+      padding: 20px;
+      border-radius: 10px;
       display: none;
     }
-    #leaderboard {
-      margin-top: 20px;
+    .account-form.active { display: block; }
+    .account-form input[type="text"],
+    .account-form input[type="password"] {
+      width: 80%;
+      padding: 10px;
+      margin: 10px auto;
+      display: block;
+      border: 2px solid #444;
+      border-radius: 5px;
+      font-size: 1rem;
     }
-    table {
+    .account-form button {
+      background: linear-gradient(45deg, #ff6b6b, #f06595);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      margin: 10px;
+      border-radius: 5px;
+      font-family: 'Press Start 2P', cursive;
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
+    .account-form button:hover { transform: scale(1.05); }
+    /* Toggle buttons for account forms */
+    #account-toggle button {
+      background: linear-gradient(45deg, #6bc1ff, #4099ff);
+      color: #fff;
+      border: none;
+      padding: 10px 15px;
+      margin: 0 5px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-family: 'Press Start 2P', cursive;
+      transition: transform 0.1s ease;
+    }
+    #account-toggle button:hover { transform: scale(1.05); }
+    /* Game info panel */
+    .info {
+      background: rgba(0, 0, 0, 0.65);
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 15px;
+      text-align: center;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+    .info span { font-weight: bold; }
+    /* Game controls */
+    .game-controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+    .game-controls button {
+      background: linear-gradient(45deg, #ff6b6b, #f06595);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-family: 'Press Start 2P', cursive;
+      transition: transform 0.1s ease, background 0.3s ease;
+    }
+    .game-controls button:hover { background: linear-gradient(45deg, #f06595, #ff6b6b); }
+    .game-controls button:active { transform: scale(0.95); }
+    /* Achievement notification */
+    #achievement-container {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ffdd57;
+      color: #333;
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-family: 'Press Start 2P', cursive;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+      z-index: 100;
+    }
+    #achievement-container.show { opacity: 1; }
+    /* Leaderboard */
+    #leaderboard {
+      margin-top: 30px;
+    }
+    #leaderboard table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 10px;
+      font-family: 'Press Start 2P', cursive;
     }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
+    #leaderboard th, #leaderboard td {
+      border: 1px solid #444;
+      padding: 10px;
       text-align: center;
     }
+    #leaderboard th { background: #4099ff; }
+    /* Logout button */
+    #logout-button {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: linear-gradient(45deg, #f6d365, #fda085);
+      border: none;
+      padding: 8px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-family: 'Press Start 2P', cursive;
+      transition: transform 0.1s ease;
+    }
+    #logout-button:hover { transform: scale(1.05); }
   </style>
 </head>
 <body>
-<div id="game-container">
-  <!-- Username setup -->
-  <div id="username-container">
-    <h2>Enter Your Username</h2>
-    <input type="text" id="username-input" placeholder="Username">
-    <button id="start-game">Start Game</button>
-  </div>
+  <div id="game-container">
+    <!-- Achievement Notification -->
+    <div id="achievement-container" class="hidden"></div>
 
-  <!-- Main game area (hidden until a username is entered) -->
-  <div id="game" class="hidden">
-    <h1>Symbol Simulator</h1>
-    <div>
-      <strong>Periods:</strong> <span id="periods-display">0</span><br>
-      <strong>Rebirths:</strong> <span id="rebirths-display">0</span><br>
-      <strong>Commas:</strong> <span id="commas-display">0</span><br>
-      <strong>Time Played:</strong> <span id="time-played-display">0</span> seconds<br>
-      <strong>Click Value:</strong> <span id="click-value-display">1</span><br>
-      <strong>Auto Production Multiplier:</strong> <span id="production-multiplier-display">1.00</span>
+    <!-- Account Management -->
+    <div id="account-container">
+      <div id="account-toggle">
+        <button id="show-login">Login</button>
+        <button id="show-signup">Sign Up</button>
+      </div>
+      <div id="login-form" class="account-form active">
+        <h2>Login</h2>
+        <input type="text" id="login-username" placeholder="Username">
+        <input type="password" id="login-password" placeholder="Password">
+        <button id="login-button">Login</button>
+      </div>
+      <div id="signup-form" class="account-form">
+        <h2>Sign Up</h2>
+        <input type="text" id="signup-username" placeholder="Username">
+        <input type="password" id="signup-password" placeholder="Password">
+        <button id="signup-button">Sign Up</button>
+      </div>
     </div>
-    <br>
-    <button id="click-button">Click for .</button>
-    <button id="buy-upgrade-button">
-      Buy Auto-Clicker (Cost: <span id="upgrade-cost-display">10</span> periods)
-    </button>
-    <button id="buy-manual-upgrade-button">
-      Buy Manual Click Upgrade (Cost: <span id="manual-upgrade-cost-display">50</span> periods)
-    </button>
-    <button id="buy-production-upgrade-button">
-      Buy Production Upgrade (Cost: <span id="production-upgrade-cost-display">100</span> periods)
-    </button>
-    <button id="rebirth-button" class="hidden">
-      Rebirth (Cost: <span id="rebirth-cost-display">1,000,000,000</span> periods)
-    </button>
-    <button id="buy-comma-button" class="hidden">
-      Buy Comma (Cost: <span id="comma-cost-display">1000</span> periods)
-    </button>
-    <br><br>
-    <button id="save-game-button">Save Game</button>
-    <button id="load-game-button">Load Game</button>
+
+    <!-- Game UI (hidden until logged in) -->
+    <button id="logout-button" class="hidden">Logout</button>
+    <div id="game" class="hidden">
+      <h1>Symbol Simulator</h1>
+      <div class="info">
+        <div><span>Periods:</span> <span id="periods-display">0</span></div>
+        <div><span>Rebirths:</span> <span id="rebirths-display">0</span></div>
+        <div><span>Commas:</span> <span id="commas-display">0</span></div>
+        <div><span>Time Played:</span> <span id="time-played-display">0</span> s</div>
+        <div><span>Click Value:</span> <span id="click-value-display">1</span></div>
+        <div><span>Auto Production Multiplier:</span> <span id="production-multiplier-display">1.00</span></div>
+      </div>
+
+      <!-- Fun Fact -->
+      <div id="fun-fact-container" class="fun-fact">
+        Fun Fact: Click the button to earn periods!
+      </div>
+
+      <!-- Game Controls -->
+      <div class="game-controls">
+        <button id="click-button">Click for .</button>
+      </div>
+
+      <div class="game-controls">
+        <button id="buy-upgrade-button">
+          Summon Period Minion (Cost: <span id="upgrade-cost-display">10</span>)
+        </button>
+        <button id="max-buy-upgrade-button">Max Buy Minions</button>
+      </div>
+
+      <div class="game-controls">
+        <button id="buy-manual-upgrade-button">
+          Enhance Click Efficiency (Cost: <span id="manual-upgrade-cost-display">50</span>)
+        </button>
+        <button id="max-buy-manual-upgrade-button">Max Buy Efficiency</button>
+      </div>
+
+      <div class="game-controls">
+        <button id="buy-production-upgrade-button">
+          Optimize Automation (Cost: <span id="production-upgrade-cost-display">100</span>)
+        </button>
+        <button id="max-buy-production-upgrade-button">Max Buy Automation</button>
+      </div>
+
+      <div class="game-controls">
+        <button id="rebirth-button" class="hidden">
+          Ascend (Rebirth) (Cost: <span id="rebirth-cost-display">1,000,000,000</span>)
+        </button>
+      </div>
+
+      <div class="game-controls">
+        <button id="buy-comma-button" class="hidden">
+          Harness Comma Power (Cost: <span id="comma-cost-display">1000</span>)
+        </button>
+        <button id="max-buy-comma-button" class="hidden">Max Buy Comma</button>
+      </div>
+
+      <div class="game-controls" style="margin-top: 15px;">
+        <button id="save-game-button">Save Game</button>
+        <button id="load-game-button">Load Game</button>
+      </div>
+    </div>
+
+    <!-- Leaderboard -->
+    <div id="leaderboard">
+      <h2>Leaderboard</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Time Played (s)</th>
+            <th>Periods</th>
+            <th>Commas</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboard-body"></tbody>
+      </table>
+    </div>
   </div>
 
-  <!-- Leaderboard -->
-  <div id="leaderboard">
-    <h2>Leaderboard</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Username</th>
-          <th>Time Played (s)</th>
-          <th>Periods</th>
-          <th>Commas</th>
-        </tr>
-      </thead>
-      <tbody id="leaderboard-body">
-      </tbody>
-    </table>
-  </div>
-</div>
+  <script>
+    /***** ACCOUNT & GAME STATE MANAGEMENT *****/
+    const defaultGameState = {
+      periods: 0,
+      autoClickers: 0,
+      upgradeCost: 10,           // For a Period Minion
+      rebirths: 0,
+      rebirthThreshold: 1e9,     // 1 Billion periods for ascension
+      commas: 0,
+      commaCost: 1000,
+      timePlayed: 0,
+      lastUpdate: Date.now(),
+      clickValue: 1,
+      manualUpgradeCost: 50,
+      productionMultiplier: 1,
+      productionUpgradeCost: 100,
+      achievements: {}
+    };
 
-<script>
-  // Initial game state with additional upgrades
-  let gameState = {
-    username: "",
-    periods: 0,
-    autoClickers: 0,
-    upgradeCost: 10, // cost for an auto-clicker
-    rebirths: 0,
-    rebirthThreshold: 1e9, // 1 billion periods for first rebirth
-    commas: 0,
-    commaCost: 1000,
-    timePlayed: 0, // in seconds
-    lastUpdate: Date.now(),
-    clickValue: 1,              // Amount earned per manual click
-    manualUpgradeCost: 50,      // Cost for upgrading click value
-    productionMultiplier: 1,    // Multiplier for auto production
-    productionUpgradeCost: 100  // Cost for upgrading production multiplier
-  };
+    // Get stored accounts (an object mapping usernames to { password, gameState })
+    function getAccounts() {
+      return JSON.parse(localStorage.getItem("symbolSimulatorAccounts") || "{}");
+    }
+    function saveAccounts(accounts) {
+      localStorage.setItem("symbolSimulatorAccounts", JSON.stringify(accounts));
+    }
 
-  // Utility: Format numbers with abbreviations up to Sextillion
-  function formatNumber(num) {
-    const abbreviations = [
-      { value: 1e21, symbol: "Sx" },
-      { value: 1e18, symbol: "Qi" },
-      { value: 1e15, symbol: "Qa" },
-      { value: 1e12, symbol: "T" },
-      { value: 1e9, symbol: "B" },
-      { value: 1e6, symbol: "M" },
-      { value: 1e3, symbol: "K" }
+    // Global gameState and currentAccount username
+    let gameState = {};
+    let currentUsername = "";
+
+    /***** ACHIEVEMENTS *****/
+    // Add extra achievements – note: conditions use the current gameState
+    const achievementsList = [
+      { id: "accountCreated", condition: () => true, message: "Account Created! Welcome, adventurer!" },
+      { id: "gettingStarted", condition: () => gameState.periods >= 10, message: "Getting Started: 10 periods earned!" },
+      { id: "firstMinion", condition: () => gameState.autoClickers >= 1, message: "First Period Minion summoned!" },
+      { id: "millionaire", condition: () => gameState.periods >= 1e6, message: "Millionaire: 1 Million periods reached!" },
+      { id: "billionaire", condition: () => gameState.periods >= 1e9, message: "Billionaire: 1 Billion periods reached!" },
+      { id: "ascendant", condition: () => gameState.rebirths >= 1, message: "Reincarnation achieved: 1 ascension!" },
+      { id: "cosmicAscension", condition: () => gameState.rebirths >= 5, message: "Cosmic Ascension: 5 ascensions achieved!" },
+      { id: "galacticOverlord", condition: () => gameState.rebirths >= 10, message: "Galactic Overlord: 10 ascensions achieved!" },
+      { id: "commaConnoisseur", condition: () => gameState.commas >= 10, message: "Comma Connoisseur: 10 commas harnessed!" },
+      { id: "clickMaster", condition: () => gameState.clickValue >= 10, message: "Click Master: Your click efficiency is legendary!" },
+      { id: "automationAce", condition: () => gameState.productionMultiplier >= 5, message: "Automation Ace: Production on another level!" },
+      { id: "ultimateMillionaire", condition: () => gameState.periods >= 1e12, message: "Ultimate Millionaire: 1 Trillion periods reached!" }
     ];
-    for (let i = 0; i < abbreviations.length; i++) {
-      if (num >= abbreviations[i].value) {
-        return (num / abbreviations[i].value).toFixed(2) + abbreviations[i].symbol;
+
+    function displayAchievement(message) {
+      const container = document.getElementById("achievement-container");
+      container.textContent = message;
+      container.classList.remove("hidden");
+      container.classList.add("show");
+      playBeep();
+      setTimeout(() => { container.classList.remove("show"); }, 3000);
+    }
+
+    function checkAchievements() {
+      achievementsList.forEach(ach => {
+        if (!gameState.achievements[ach.id] && ach.condition()) {
+          gameState.achievements[ach.id] = true;
+          displayAchievement(ach.message);
+        }
+      });
+    }
+
+    function playBeep() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(440, ctx.currentTime);
+        osc.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.1);
+      } catch(e) { console.log("Audio API not supported."); }
+    }
+
+    /***** UI: Account Form Toggle *****/
+    document.getElementById("show-login").addEventListener("click", () => {
+      document.getElementById("login-form").classList.add("active");
+      document.getElementById("signup-form").classList.remove("active");
+    });
+    document.getElementById("show-signup").addEventListener("click", () => {
+      document.getElementById("signup-form").classList.add("active");
+      document.getElementById("login-form").classList.remove("active");
+    });
+
+    /***** SIGN UP *****/
+    document.getElementById("signup-button").addEventListener("click", () => {
+      const username = document.getElementById("signup-username").value.trim();
+      const password = document.getElementById("signup-password").value;
+      if (!username || !password) {
+        alert("Please enter a username and password.");
+        return;
+      }
+      let accounts = getAccounts();
+      if (accounts[username]) {
+        alert("Username already exists! Please choose another.");
+        return;
+      }
+      // Enforce exclusivity for "King of dots"
+      if (username === "King of dots" && accounts["King of dots"]) {
+        alert("The username 'King of dots' is reserved for the owner.");
+        return;
+      }
+      accounts[username] = {
+        password: password,
+        gameState: JSON.parse(JSON.stringify(defaultGameState))
+      };
+      saveAccounts(accounts);
+      alert("Account created! Please log in.");
+      document.getElementById("signup-username").value = "";
+      document.getElementById("signup-password").value = "";
+      // Optionally, switch to login form
+      document.getElementById("show-login").click();
+    });
+
+    /***** LOGIN *****/
+    document.getElementById("login-button").addEventListener("click", () => {
+      const username = document.getElementById("login-username").value.trim();
+      const password = document.getElementById("login-password").value;
+      if (!username || !password) {
+        alert("Please enter a username and password.");
+        return;
+      }
+      let accounts = getAccounts();
+      if (!accounts[username]) {
+        alert("No account found with that username. Please sign up first.");
+        return;
+      }
+      if (accounts[username].password !== password) {
+        alert("Incorrect password. Please try again.");
+        return;
+      }
+      // Successful login: load game state and show game UI
+      currentUsername = username;
+      gameState = accounts[username].gameState;
+      // Update lastUpdate time
+      gameState.lastUpdate = Date.now();
+      // Hide account container and show game and logout button
+      document.getElementById("account-container").classList.add("hidden");
+      document.getElementById("game").classList.remove("hidden");
+      document.getElementById("logout-button").classList.remove("hidden");
+      updateDisplay();
+      setInterval(gameLoop, 50);
+      updateLeaderboard();
+      displayAchievement("Welcome back, " + username + "!");
+    });
+
+    /***** LOGOUT *****/
+    document.getElementById("logout-button").addEventListener("click", () => {
+      saveGame(); // Save current game state to account before logout
+      currentUsername = "";
+      gameState = {};
+      document.getElementById("game").classList.add("hidden");
+      document.getElementById("logout-button").classList.add("hidden");
+      document.getElementById("account-container").classList.remove("hidden");
+      alert("Logged out successfully.");
+    });
+
+    /***** GAME UI FUNCTIONS *****/
+    // Utility: Format numbers with abbreviations
+    function formatNumber(num) {
+      const abbrev = [
+        { value: 1e21, symbol: "Sx" },
+        { value: 1e18, symbol: "Qi" },
+        { value: 1e15, symbol: "Qa" },
+        { value: 1e12, symbol: "T" },
+        { value: 1e9,  symbol: "B" },
+        { value: 1e6,  symbol: "M" },
+        { value: 1e3,  symbol: "K" }
+      ];
+      for (let i = 0; i < abbrev.length; i++) {
+        if (num >= abbrev[i].value)
+          return (num / abbrev[i].value).toFixed(2) + abbrev[i].symbol;
+      }
+      return num.toFixed(2);
+    }
+
+    // Update game info display
+    function updateDisplay() {
+      // Calculate multipliers: Rebith multiplier doubles per ascension; comma multiplier is minor.
+      const rebirthMultiplier = Math.pow(2, gameState.rebirths);
+      const commaMultiplier = Math.pow(1.005, gameState.commas);
+      document.getElementById("periods-display").textContent =
+        formatNumber(gameState.periods) + " (×" + (rebirthMultiplier * commaMultiplier).toFixed(3) + ")";
+      document.getElementById("rebirths-display").textContent = gameState.rebirths;
+      document.getElementById("commas-display").textContent = gameState.commas;
+      document.getElementById("upgrade-cost-display").textContent = formatNumber(gameState.upgradeCost);
+      document.getElementById("rebirth-cost-display").textContent = formatNumber(gameState.rebirthThreshold);
+      document.getElementById("comma-cost-display").textContent = formatNumber(gameState.commaCost);
+      document.getElementById("time-played-display").textContent = Math.floor(gameState.timePlayed);
+      document.getElementById("click-value-display").textContent = gameState.clickValue;
+      document.getElementById("production-multiplier-display").textContent = gameState.productionMultiplier.toFixed(2);
+      document.getElementById("manual-upgrade-cost-display").textContent = formatNumber(gameState.manualUpgradeCost);
+      document.getElementById("production-upgrade-cost-display").textContent = formatNumber(gameState.productionUpgradeCost);
+    }
+
+    // Save game state to current account and update accounts storage
+    function saveGame() {
+      let accounts = getAccounts();
+      if (currentUsername) {
+        accounts[currentUsername].gameState = gameState;
+        saveAccounts(accounts);
+        updateLeaderboard();
+        alert("Game saved!");
       }
     }
-    return num.toFixed(2);
-  }
 
-  // Update game display
-  function updateDisplay() {
-    // Calculate multiplier from commas if unlocked (after 5 rebirths)
-    let multiplier = 1;
-    if (gameState.rebirths >= 5) {
-      multiplier = Math.pow(1.005, gameState.commas);
+    // Load game state from current account (triggered by button)
+    function loadGame() {
+      let accounts = getAccounts();
+      if (currentUsername && accounts[currentUsername]) {
+        gameState = accounts[currentUsername].gameState;
+        gameState.lastUpdate = Date.now();
+        alert("Game loaded!");
+        updateDisplay();
+      } else {
+        alert("No saved game found.");
+      }
     }
-    document.getElementById("periods-display").textContent =
-      formatNumber(gameState.periods) + (multiplier !== 1 ? " (x" + multiplier.toFixed(3) + ")" : "");
-    document.getElementById("rebirths-display").textContent = gameState.rebirths;
-    document.getElementById("commas-display").textContent = gameState.commas;
-    document.getElementById("upgrade-cost-display").textContent = formatNumber(gameState.upgradeCost);
-    document.getElementById("rebirth-cost-display").textContent = formatNumber(gameState.rebirthThreshold);
-    document.getElementById("comma-cost-display").textContent = formatNumber(gameState.commaCost);
-    document.getElementById("time-played-display").textContent = Math.floor(gameState.timePlayed);
-    document.getElementById("click-value-display").textContent = gameState.clickValue.toFixed(2);
-    document.getElementById("production-multiplier-display").textContent = gameState.productionMultiplier.toFixed(2);
-    document.getElementById("manual-upgrade-cost-display").textContent = formatNumber(gameState.manualUpgradeCost);
-    document.getElementById("production-upgrade-cost-display").textContent = formatNumber(gameState.productionUpgradeCost);
-  }
 
-  // Save the current game state using localStorage
-  function saveGame() {
-    localStorage.setItem("symbolSimulatorGameState_" + gameState.username, JSON.stringify(gameState));
-    updateLeaderboard();
-    alert("Game saved!");
-  }
+    /***** LEADERBOARD *****/
+    function updateLeaderboard() {
+      let leaderboard = JSON.parse(localStorage.getItem("symbolSimulatorLeaderboard") || "{}");
+      // Update leaderboard if this account has higher periods
+      if (!leaderboard[currentUsername] || gameState.periods > leaderboard[currentUsername].periods) {
+        leaderboard[currentUsername] = {
+          username: currentUsername,
+          timePlayed: gameState.timePlayed,
+          periods: gameState.periods,
+          commas: gameState.commas
+        };
+      }
+      localStorage.setItem("symbolSimulatorLeaderboard", JSON.stringify(leaderboard));
+      // Render leaderboard table
+      let lbBody = document.getElementById("leaderboard-body");
+      lbBody.innerHTML = "";
+      let entries = Object.values(leaderboard);
+      entries.sort((a, b) => b.periods - a.periods);
+      entries.forEach(entry => {
+        let name = entry.username;
+        if (entry.username === "King of dots") name += " ✔️";
+        let row = document.createElement("tr");
+        row.innerHTML = `<td>${name}</td>
+                         <td>${Math.floor(entry.timePlayed)}</td>
+                         <td>${formatNumber(entry.periods)}</td>
+                         <td>${entry.commas}</td>`;
+        lbBody.appendChild(row);
+      });
+    }
 
-  // Load the game state from localStorage
-  function loadGame() {
-    let savedState = localStorage.getItem("symbolSimulatorGameState_" + gameState.username);
-    if (savedState) {
-      gameState = JSON.parse(savedState);
-      gameState.lastUpdate = Date.now();
-      alert("Game loaded!");
+    /***** GAME LOOP *****/
+    function gameLoop() {
+      let now = Date.now();
+      let delta = (now - gameState.lastUpdate) / 1000;
+      gameState.lastUpdate = now;
+      gameState.timePlayed += delta;
+      // Calculate multipliers (rebirth doubles and commas add a small bonus)
+      const rebirthMultiplier = Math.pow(2, gameState.rebirths);
+      const commaMultiplier = Math.pow(1.005, gameState.commas);
+      // Auto production from Period Minions:
+      gameState.periods += gameState.autoClickers * gameState.productionMultiplier * rebirthMultiplier * commaMultiplier * delta;
+      // Show Ascend button if periods meet threshold:
+      let rebirthBtn = document.getElementById("rebirth-button");
+      if (gameState.periods >= gameState.rebirthThreshold) {
+        rebirthBtn.classList.remove("hidden");
+      } else {
+        rebirthBtn.classList.add("hidden");
+      }
+      // Show Comma upgrade if at least 5 ascensions:
+      let buyCommaBtn = document.getElementById("buy-comma-button");
+      let maxBuyCommaBtn = document.getElementById("max-buy-comma-button");
+      if (gameState.rebirths >= 5) {
+        buyCommaBtn.classList.remove("hidden");
+        maxBuyCommaBtn.classList.remove("hidden");
+      } else {
+        buyCommaBtn.classList.add("hidden");
+        maxBuyCommaBtn.classList.add("hidden");
+      }
       updateDisplay();
-    } else {
-      alert("No saved game found for this username.");
+      checkAchievements();
     }
-  }
 
-  // Update leaderboard data in localStorage and render the leaderboard table
-  function updateLeaderboard() {
-    let leaderboard = JSON.parse(localStorage.getItem("symbolSimulatorLeaderboard")) || {};
-    // Update only if current player's periods are higher than recorded
-    if (!leaderboard[gameState.username] || gameState.periods > leaderboard[gameState.username].periods) {
-      leaderboard[gameState.username] = {
-        username: gameState.username,
-        timePlayed: gameState.timePlayed,
-        periods: gameState.periods,
-        commas: gameState.commas
-      };
-    }
-    localStorage.setItem("symbolSimulatorLeaderboard", JSON.stringify(leaderboard));
-    
-    // Render leaderboard
-    let leaderboardBody = document.getElementById("leaderboard-body");
-    leaderboardBody.innerHTML = "";
-    let leaderboardArray = Object.values(leaderboard);
-    // Sort by periods descending
-    leaderboardArray.sort((a, b) => b.periods - a.periods);
-    leaderboardArray.forEach(entry => {
-      let row = document.createElement("tr");
-      row.innerHTML = `<td>${entry.username}</td>
-                       <td>${Math.floor(entry.timePlayed)}</td>
-                       <td>${formatNumber(entry.periods)}</td>
-                       <td>${entry.commas}</td>`;
-      leaderboardBody.appendChild(row);
+    /***** BUTTON EVENT LISTENERS FOR UPGRADES *****/
+    // Manual click – each click adds periods based on clickValue and multipliers.
+    document.getElementById("click-button").addEventListener("click", () => {
+      const rebirthMultiplier = Math.pow(2, gameState.rebirths);
+      const commaMultiplier = Math.pow(1.005, gameState.commas);
+      gameState.periods += gameState.clickValue * rebirthMultiplier * commaMultiplier;
+      updateDisplay();
     });
-  }
 
-  // Main game loop: updates every 50ms
-  function gameLoop() {
-    let now = Date.now();
-    let delta = (now - gameState.lastUpdate) / 1000; // seconds elapsed
-    gameState.lastUpdate = now;
-    gameState.timePlayed += delta;
+    // Summon Period Minion (buy one)
+    document.getElementById("buy-upgrade-button").addEventListener("click", () => {
+      if (gameState.periods >= gameState.upgradeCost) {
+        gameState.periods -= gameState.upgradeCost;
+        gameState.autoClickers += 1;
+        gameState.upgradeCost *= 1.20;
+        updateDisplay();
+      } else {
+        alert("Not enough periods!");
+      }
+    });
 
-    // Calculate multiplier for production (from commas, if unlocked)
-    let multiplier = 1;
-    if (gameState.rebirths >= 5) {
-      multiplier = Math.pow(1.005, gameState.commas);
-    }
-    // Auto production: auto-clickers produce periods based on production multiplier
-    gameState.periods += gameState.autoClickers * delta * multiplier * gameState.productionMultiplier;
-
-    // Show rebirth button if threshold is met
-    let rebirthButton = document.getElementById("rebirth-button");
-    if (gameState.periods >= gameState.rebirthThreshold) {
-      rebirthButton.classList.remove("hidden");
-    } else {
-      rebirthButton.classList.add("hidden");
-    }
-
-    // Show the Buy Comma button if 5 or more rebirths have been achieved
-    let buyCommaButton = document.getElementById("buy-comma-button");
-    if (gameState.rebirths >= 5) {
-      buyCommaButton.classList.remove("hidden");
-    } else {
-      buyCommaButton.classList.add("hidden");
-    }
-
-    updateDisplay();
-  }
-
-  // Event: Start Game after entering username
-  document.getElementById("start-game").addEventListener("click", function() {
-    let username = document.getElementById("username-input").value.trim();
-    if (username === "") {
-      alert("Please enter a valid username!");
-      return;
-    }
-    gameState.username = username;
-    // Attempt to load a saved game automatically
-    let savedState = localStorage.getItem("symbolSimulatorGameState_" + gameState.username);
-    if (savedState) {
-      gameState = JSON.parse(savedState);
-      gameState.lastUpdate = Date.now();
-    }
-    document.getElementById("username-container").classList.add("hidden");
-    document.getElementById("game").classList.remove("hidden");
-    updateDisplay();
-    // Start the game loop
-    setInterval(gameLoop, 50);
-    updateLeaderboard();
-  });
-
-  // Event: Manual click for a period
-  document.getElementById("click-button").addEventListener("click", function() {
-    let multiplier = 1;
-    if (gameState.rebirths >= 5) {
-      multiplier = Math.pow(1.005, gameState.commas);
-    }
-    // Use clickValue instead of a fixed 1
-    gameState.periods += gameState.clickValue * multiplier;
-    updateDisplay();
-  });
-
-  // Event: Buy an auto-clicker upgrade
-  document.getElementById("buy-upgrade-button").addEventListener("click", function() {
-    if (gameState.periods >= gameState.upgradeCost) {
-      gameState.periods -= gameState.upgradeCost;
-      gameState.autoClickers += 1;
-      // Increase cost by 15%
-      gameState.upgradeCost *= 1.15;
+    // Max Buy Period Minions
+    document.getElementById("max-buy-upgrade-button").addEventListener("click", () => {
+      const f = 1.20;
+      let cost = gameState.upgradeCost;
+      let available = gameState.periods;
+      if (available < cost) { alert("Not enough periods!"); return; }
+      let k = Math.floor(Math.log(1 + (available*(f-1))/cost) / Math.log(f));
+      if (k < 1) return;
+      let totalCost = cost * (Math.pow(f, k) - 1) / (f - 1);
+      gameState.periods -= totalCost;
+      gameState.autoClickers += k;
+      gameState.upgradeCost *= Math.pow(f, k);
       updateDisplay();
-    } else {
-      alert("Not enough periods!");
-    }
-  });
+    });
 
-  // Event: Buy Manual Click Upgrade (increases periods per click)
-  document.getElementById("buy-manual-upgrade-button").addEventListener("click", function() {
-    if (gameState.periods >= gameState.manualUpgradeCost) {
-      gameState.periods -= gameState.manualUpgradeCost;
-      gameState.clickValue += 1; // Increase click value by 1
-      gameState.manualUpgradeCost *= 1.2;
+    // Enhance Click Efficiency (buy one)
+    document.getElementById("buy-manual-upgrade-button").addEventListener("click", () => {
+      if (gameState.periods >= gameState.manualUpgradeCost) {
+        gameState.periods -= gameState.manualUpgradeCost;
+        gameState.clickValue += 1;
+        gameState.manualUpgradeCost *= 1.30;
+        updateDisplay();
+      } else {
+        alert("Not enough periods for click upgrade!");
+      }
+    });
+
+    // Max Buy Click Efficiency
+    document.getElementById("max-buy-manual-upgrade-button").addEventListener("click", () => {
+      const f = 1.30;
+      let cost = gameState.manualUpgradeCost;
+      let available = gameState.periods;
+      if (available < cost) { alert("Not enough periods!"); return; }
+      let k = Math.floor(Math.log(1 + (available*(f-1))/cost) / Math.log(f));
+      if (k < 1) return;
+      let totalCost = cost * (Math.pow(f, k) - 1) / (f - 1);
+      gameState.periods -= totalCost;
+      gameState.clickValue += k;
+      gameState.manualUpgradeCost *= Math.pow(f, k);
       updateDisplay();
-    } else {
-      alert("Not enough periods to upgrade your click!");
-    }
-  });
+    });
 
-  // Event: Buy Production Upgrade (increases auto production efficiency)
-  document.getElementById("buy-production-upgrade-button").addEventListener("click", function() {
-    if (gameState.periods >= gameState.productionUpgradeCost) {
-      gameState.periods -= gameState.productionUpgradeCost;
-      gameState.productionMultiplier *= 1.1; // Increase auto production by 10%
-      gameState.productionUpgradeCost *= 1.3;
+    // Optimize Automation (buy one)
+    document.getElementById("buy-production-upgrade-button").addEventListener("click", () => {
+      if (gameState.periods >= gameState.productionUpgradeCost) {
+        gameState.periods -= gameState.productionUpgradeCost;
+        gameState.productionMultiplier *= 1.05;
+        gameState.productionUpgradeCost *= 1.50;
+        updateDisplay();
+      } else {
+        alert("Not enough periods for automation upgrade!");
+      }
+    });
+
+    // Max Buy Automation
+    document.getElementById("max-buy-production-upgrade-button").addEventListener("click", () => {
+      const f = 1.50;
+      let cost = gameState.productionUpgradeCost;
+      let available = gameState.periods;
+      if (available < cost) { alert("Not enough periods!"); return; }
+      let k = Math.floor(Math.log(1 + (available*(f-1))/cost) / Math.log(f));
+      if (k < 1) return;
+      let totalCost = cost * (Math.pow(f, k) - 1) / (f - 1);
+      gameState.periods -= totalCost;
+      gameState.productionMultiplier *= Math.pow(1.05, k);
+      gameState.productionUpgradeCost *= Math.pow(f, k);
       updateDisplay();
-    } else {
-      alert("Not enough periods to upgrade your production!");
-    }
-  });
+    });
 
-  // Event: Rebirth (resets progress but increases rebirth count and threshold)
-  document.getElementById("rebirth-button").addEventListener("click", function() {
-    if (gameState.periods >= gameState.rebirthThreshold) {
-      // Reset progress while preserving rebirth count and upgrades
-      gameState.periods = 0;
-      gameState.autoClickers = 0;
-      gameState.upgradeCost = 10;
-      // Optionally, you might choose to reset manual and production upgrades too.
-      // Here, we leave clickValue, productionMultiplier, and their costs intact.
-      gameState.rebirths += 1;
-      // Increase the threshold for the next rebirth (example: 10×)
-      gameState.rebirthThreshold *= 10;
+    // Ascend (Rebirth)
+    document.getElementById("rebirth-button").addEventListener("click", () => {
+      if (gameState.periods >= gameState.rebirthThreshold) {
+        gameState.periods = 0;
+        gameState.autoClickers = 0;
+        gameState.upgradeCost = 10;
+        gameState.rebirths += 1;
+        gameState.rebirthThreshold *= 10;
+        updateDisplay();
+        alert("Ascension successful! Production is now multiplied by " + Math.pow(2, gameState.rebirths) + "!");
+      } else {
+        alert("Not enough periods to ascend!");
+      }
+    });
+
+    // Harness Comma Power (buy one)
+    document.getElementById("buy-comma-button").addEventListener("click", () => {
+      if (gameState.periods >= gameState.commaCost) {
+        gameState.periods -= gameState.commaCost;
+        gameState.commas += 1;
+        gameState.commaCost *= 1.25;
+        updateDisplay();
+      } else {
+        alert("Not enough periods for comma upgrade!");
+      }
+    });
+
+    // Max Buy Comma Power
+    document.getElementById("max-buy-comma-button").addEventListener("click", () => {
+      const f = 1.25;
+      let cost = gameState.commaCost;
+      let available = gameState.periods;
+      if (available < cost) { alert("Not enough periods!"); return; }
+      let k = Math.floor(Math.log(1 + (available*(f-1))/cost) / Math.log(f));
+      if (k < 1) return;
+      let totalCost = cost * (Math.pow(f, k) - 1) / (f - 1);
+      gameState.periods -= totalCost;
+      gameState.commas += k;
+      gameState.commaCost *= Math.pow(f, k);
       updateDisplay();
-      alert("Rebirth successful!");
-    } else {
-      alert("Not enough periods to rebirth!");
-    }
-  });
+    });
 
-  // Event: Buy a comma upgrade (unlocked after 5 rebirths)
-  document.getElementById("buy-comma-button").addEventListener("click", function() {
-    if (gameState.periods >= gameState.commaCost) {
-      gameState.periods -= gameState.commaCost;
-      gameState.commas += 1;
-      // Increase cost for the next comma by 25%
-      gameState.commaCost *= 1.25;
-      updateDisplay();
-    } else {
-      alert("Not enough periods to buy a comma!");
-    }
-  });
+    // Save and Load Game buttons
+    document.getElementById("save-game-button").addEventListener("click", saveGame);
+    document.getElementById("load-game-button").addEventListener("click", loadGame);
 
-  // Save and Load buttons
-  document.getElementById("save-game-button").addEventListener("click", saveGame);
-  document.getElementById("load-game-button").addEventListener("click", loadGame);
-
-  // Save game automatically before leaving the page
-  window.addEventListener("beforeunload", saveGame);
-</script>
+    // Auto-save before leaving page
+    window.addEventListener("beforeunload", saveGame);
+  </script>
 </body>
 </html>
-
